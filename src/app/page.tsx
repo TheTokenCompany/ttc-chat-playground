@@ -46,6 +46,7 @@ function ChatContent() {
     compressionAggressiveness: 0.9,
   });
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [showMobileSettings, setShowMobileSettings] = useState(false);
 
   // Compression celebration state
   const [compressionCelebration, setCompressionCelebration] = useState<{
@@ -415,31 +416,31 @@ function ChatContent() {
       {/* Chat Area */}
       <div className="flex-1 flex flex-col relative overflow-hidden">
         {/* Header with Model & System Prompt */}
-        <div className="border-b border-zinc-800 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
+        <div className="border-b border-zinc-800 p-3 sm:p-4">
+          <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <select
                 value={model.id}
                 onChange={(e) => {
                   const newModel = models.find(m => m.id === e.target.value);
                   if (newModel) setModel(newModel);
                 }}
-                className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="bg-zinc-800 border border-zinc-700 rounded-lg px-2 sm:px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 min-w-0"
               >
                 {models.map((m) => (
                   <option key={m.id} value={m.id}>{m.name}</option>
                 ))}
               </select>
-              <span className="text-xs text-zinc-500">
+              <span className="text-xs text-zinc-500 hidden sm:inline">
                 ${model.inputCostPer1M}/1M in, ${model.outputCostPer1M}/1M out
               </span>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <a
                 href="https://thetokencompany.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-zinc-400 hover:text-white transition-colors"
+                className="text-xs sm:text-sm text-zinc-400 hover:text-white transition-colors hidden sm:inline"
               >
                 Get API Key
               </a>
@@ -447,15 +448,25 @@ function ChatContent() {
                 href="https://github.com/TheTokenCompany/ttc-chat-playground"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-zinc-400 hover:text-white transition-colors"
+                className="text-xs sm:text-sm text-zinc-400 hover:text-white transition-colors hidden sm:inline"
               >
                 GitHub
               </a>
               <button
                 onClick={() => setShowHowItWorks(true)}
-                className="text-sm text-indigo-400 hover:text-indigo-300"
+                className="text-xs sm:text-sm text-indigo-400 hover:text-indigo-300"
               >
                 How it works
+              </button>
+              <button
+                onClick={() => setShowMobileSettings(true)}
+                className="lg:hidden p-2 text-zinc-400 hover:text-white transition-colors"
+                title="Settings"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
               </button>
             </div>
           </div>
@@ -504,10 +515,10 @@ function ChatContent() {
 
         {/* Compression Celebration Overlay */}
         {compressionCelebration?.show && (
-          <div className="absolute inset-0 pointer-events-none z-50 flex items-center justify-center">
+          <div className="absolute inset-0 pointer-events-none z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 via-emerald-500/20 to-green-500/10 animate-pulse" />
 
-            <div className="relative bg-zinc-900/95 backdrop-blur-sm border border-green-500/50 rounded-2xl p-8 shadow-2xl shadow-green-500/20 animate-bounce-in">
+            <div className="relative bg-zinc-900/95 backdrop-blur-sm border border-green-500/50 rounded-2xl p-4 sm:p-8 shadow-2xl shadow-green-500/20 animate-bounce-in max-w-sm w-full">
               <div className="absolute -top-2 -left-2 w-4 h-4 bg-green-400 rounded-full animate-ping" />
               <div className="absolute -top-1 -right-3 w-3 h-3 bg-emerald-400 rounded-full animate-ping delay-100" />
               <div className="absolute -bottom-2 left-1/4 w-3 h-3 bg-green-300 rounded-full animate-ping delay-200" />
@@ -581,13 +592,13 @@ function ChatContent() {
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                    className={`max-w-[85%] sm:max-w-[70%] rounded-lg px-3 sm:px-4 py-2 ${
                       msg.role === 'user'
                         ? 'bg-indigo-600 text-white'
                         : 'bg-zinc-800 text-zinc-100'
                     }`}
                   >
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                    <p className="whitespace-pre-wrap text-sm sm:text-base">{msg.content}</p>
                   </div>
                 </div>
               ))}
@@ -617,15 +628,15 @@ function ChatContent() {
         )}
 
         {/* Input */}
-        <div className="border-t border-zinc-800 p-4">
+        <div className="border-t border-zinc-800 p-3 sm:p-4">
           <div className="flex gap-2">
             <button
               onClick={handleGenerateTestMessage}
               disabled={isGeneratingTest || isLoading}
-              className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm transition-colors disabled:opacity-50 whitespace-nowrap"
+              className="px-2 sm:px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm transition-colors disabled:opacity-50 whitespace-nowrap"
               title="Generate a test message"
             >
-              {isGeneratingTest ? '...' : '✨ AI Message'}
+              {isGeneratingTest ? '...' : <><span className="hidden sm:inline">✨ AI Message</span><span className="sm:hidden">✨</span></>}
             </button>
             <textarea
               ref={inputRef}
@@ -634,12 +645,12 @@ function ChatContent() {
               onKeyDown={handleKeyDown}
               placeholder="Type a message..."
               rows={1}
-              className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 sm:px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none min-w-0"
             />
             <button
               onClick={() => handleSendMessage()}
               disabled={isLoading || !inputValue.trim()}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors disabled:opacity-50"
+              className="px-3 sm:px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors disabled:opacity-50"
             >
               Send
             </button>
@@ -647,9 +658,30 @@ function ChatContent() {
         </div>
       </div>
 
-      {/* Settings Panel */}
-      <div className="w-80 border-l border-zinc-800 p-4 overflow-y-auto flex-shrink-0">
-        <h2 className="font-medium text-lg mb-4">Settings</h2>
+      {/* Settings Panel - Desktop: sidebar, Mobile: slide-over */}
+      {showMobileSettings && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setShowMobileSettings(false)}
+        />
+      )}
+      <div className={`
+        fixed lg:relative inset-y-0 right-0 z-50
+        w-80 max-w-[85vw] border-l border-zinc-800 p-4 overflow-y-auto flex-shrink-0 bg-zinc-950
+        transform transition-transform duration-300 ease-in-out
+        ${showMobileSettings ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+      `}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-medium text-lg">Settings</h2>
+          <button
+            onClick={() => setShowMobileSettings(false)}
+            className="lg:hidden p-1 text-zinc-400 hover:text-white"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+            </svg>
+          </button>
+        </div>
 
         {/* Compression Settings */}
         <div className="mb-6 p-3 bg-zinc-900 rounded-lg">
@@ -853,18 +885,18 @@ function ChatContent() {
 
       {/* How It Works Modal */}
       {showHowItWorks && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="bg-zinc-900 border border-zinc-700 rounded-xl max-w-3xl max-h-[90vh] overflow-y-auto m-4">
-            <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 p-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold">How Compression Works</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-2 sm:p-4">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-xl max-w-3xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 p-3 sm:p-4 flex items-center justify-between">
+              <h2 className="text-lg sm:text-xl font-bold">How Compression Works</h2>
               <button
                 onClick={() => setShowHowItWorks(false)}
-                className="text-zinc-400 hover:text-white text-2xl leading-none"
+                className="text-zinc-400 hover:text-white text-2xl leading-none p-1"
               >
                 ×
               </button>
             </div>
-            <div className="p-6 space-y-6">
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
               <HowItWorksSection title="When Compression Triggers">
                 <p className="text-zinc-400 mb-4">
                   Compression triggers when the message count reaches your <span className="text-indigo-400">compression frequency</span> setting (default: 5 messages).
@@ -956,6 +988,34 @@ function ChatContent() {
                   </div>
                 </div>
               </HowItWorksSection>
+
+              {/* Links - visible on mobile since header links are hidden */}
+              <div className="flex flex-wrap gap-4 pt-2 text-sm sm:hidden">
+                <a
+                  href="https://thetokencompany.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-indigo-400 hover:text-indigo-300"
+                >
+                  Get API Key
+                </a>
+                <a
+                  href="https://github.com/TheTokenCompany/ttc-chat-playground"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-indigo-400 hover:text-indigo-300"
+                >
+                  GitHub
+                </a>
+                <a
+                  href="https://thetokencompany.com/docs"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-indigo-400 hover:text-indigo-300"
+                >
+                  Documentation
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -966,8 +1026,8 @@ function ChatContent() {
 
 function HowItWorksSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-zinc-800/50 rounded-lg p-4 border border-zinc-700">
-      <h3 className="text-lg font-semibold mb-3">{title}</h3>
+    <div className="bg-zinc-800/50 rounded-lg p-3 sm:p-4 border border-zinc-700">
+      <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">{title}</h3>
       {children}
     </div>
   );
