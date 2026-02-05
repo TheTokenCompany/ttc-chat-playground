@@ -18,6 +18,27 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
+/* iOS Safari fixes */
+html, body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* iOS Safari viewport fix - use dynamic viewport height */
+.h-screen-safe {
+  height: 100vh; /* Fallback for older browsers */
+  height: 100dvh; /* Dynamic viewport height - accounts for browser UI */
+}
+
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari specific fix */
+  .h-screen-safe {
+    height: -webkit-fill-available;
+  }
+}
+
 /* Custom scrollbar for dark mode */
 ::-webkit-scrollbar {
   width: 8px;
