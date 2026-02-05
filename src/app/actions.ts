@@ -7,44 +7,12 @@ import { Message, CompressionResult, ModelInfo } from '@/types';
 const TTC_API_URL = 'https://api.thetokencompany.com/v1/compress';
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
-export async function testTtcApiKey(apiKey: string): Promise<{ valid: boolean; error?: string }> {
-  try {
-    const response = await fetch(TTC_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'bear-1',
-        input: 'test',
-        compression_settings: {
-          aggressiveness: 0.5,
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      if (response.status === 401 || response.status === 403) {
-        return { valid: false, error: 'Invalid API key' };
-      }
-      return { valid: false, error: `API error: ${error}` };
-    }
-
-    return { valid: true };
-  } catch (err) {
-    return { valid: false, error: err instanceof Error ? err.message : 'Connection failed' };
-  }
-}
-
 export async function compressText(
   text: string,
-  aggressiveness: number,
-  ttcApiKey?: string
-): Promise<CompressionResult> {
-  const apiKey = ttcApiKey || process.env.TTC_API_KEY;
-  console.log('apiKey', `Bearer ${apiKey}`);
+  aggressiveness: number
+): Promise<CompressionResult & { latencyMs: number }> {
+  const apiKey = process.env.TTC_API_KEY;
+  const startTime = Date.now();
 
   if (!apiKey) {
     throw new Error('TTC API key is required. Please enter your API key in the settings.');
@@ -71,10 +39,12 @@ export async function compressText(
   }
 
   const data = await response.json();
+  const latencyMs = Date.now() - startTime;
   return {
     output: data.output,
     outputTokens: data.output_tokens,
     originalInputTokens: data.original_input_tokens,
+    latencyMs,
   };
 }
 
@@ -173,13 +143,6 @@ export async function getAvailableModels(): Promise<ModelInfo[]> {
       outputCostPer1M: 0.28,
     },
     {
-      id: 'deepseek/deepseek-r1',
-      name: 'DeepSeek R1',
-      provider: 'DeepSeek',
-      inputCostPer1M: 0.55,
-      outputCostPer1M: 2.19,
-    },
-    {
       id: 'mistralai/mistral-small-24b-instruct-2501',
       name: 'Mistral Small 24B',
       provider: 'Mistral',
@@ -192,13 +155,6 @@ export async function getAvailableModels(): Promise<ModelInfo[]> {
       provider: 'Mistral',
       inputCostPer1M: 0.03,
       outputCostPer1M: 0.03,
-    },
-    {
-      id: 'google/gemini-2.0-flash-001',
-      name: 'Gemini 2.0 Flash',
-      provider: 'Google',
-      inputCostPer1M: 0.10,
-      outputCostPer1M: 0.40,
     },
     {
       id: 'google/gemini-flash-1.5-8b',

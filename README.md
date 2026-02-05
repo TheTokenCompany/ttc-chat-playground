@@ -1,23 +1,113 @@
-This repo should contain a nextjs project for example RP app that demonstrates the token company input compression. Docs for it here thetokencompany.com/docs
+# The Token Company Chat Playground
 
-The name of the project is The Token Company Chat Sandbox
+A demo application showcasing [The Token Company's](https://thetokencompany.com) context compression API. Chat with an LLM and watch your context size plateau instead of growing indefinitely.
 
-It should integrate OpenRouter for LLM.
+## How Compression Works
 
-The app should be super simple. There is a chatbot AI that the user can talk to and it measures the tokens spent on the conversation and the money spent.
+### The Problem
+In a typical chat application, every message is sent to the LLM on each turn. As the conversation grows, so does your context size (and cost):
 
-Before user starts a new conversation, they choose the LLM model (offer chinese models like deepseek and Mistral and some small gemini models). They can also choose the edit the system prompt if they wish but there is a default. When user goes to the chat, they have settings constantly visible on the right side of the screen where they can change the compression turn frequency (from 5 to 15) and compression aggressiveness (from 0.1 to 0.9). It also constantly displays the tokens used and tokens compressed.
+```
+Turn 1:  [System] + [User1]                                    → 500 tokens
+Turn 2:  [System] + [User1] + [Assistant1] + [User2]           → 800 tokens
+Turn 3:  [System] + [User1] + [Assistant1] + [User2] + [A2] + [U3] → 1100 tokens
+...
+Turn 20: [System] + [All previous messages]                    → 5000+ tokens
+```
 
-This is how the chat compression should work: There should be always in the list on inputs the system prompt first [{system, msg}, {agent, msg}, {user, msg} ... ] and it should append new messages to the end until we reach the compression turn frequency amount of messages. When this happens, we should take all messages apart from the first system prompt, concatenate them together in newlines with turn labels and compress with the compression aggresiveness. This compressed prompt is then added as an additional system prompt below the previous one. [{system, msg}, {system, compressed_history}, ...]. When compressing next time, it should again take the compressed history and concatenate the new messages as newlines below that and then compress the whole thing again (the compressed history gets even more compressed now which is fine). 
+### The Solution
+With TTC compression, context size **plateaus** because we periodically compress the conversation history:
 
-For the new agent or user messages added to the input to be compressed, add <ttc_safe> tokens to their turn labels so the turn labels are kept. Dont do this for the compressed_history. Read more on how to use them at https://thetokencompany.com/docs/protect-text
+```
+Turn 1-4:  Normal growth (500 → 800 → 1100 → 1400 tokens)
+Turn 5:    COMPRESSION! History compressed to ~400 tokens
+Turn 6-9:  Growth resumes from lower baseline (500 → 700 → 900 → 1100)
+Turn 10:   COMPRESSION! Re-compress everything
+...
+```
 
-For frontend, of course show the actual messages not compressed ones. Also enable toggle in the settigns to show the actual chat history messages (the compressed second system prompt and others to see under the hood).
+### Step-by-Step Compression Process
 
-You should display constantly the used input tokens, cached input tokens, cost and total compressed tokens and saved on compression for the user in the settings sidepanel. You should probably get this from the openrouter endpoint for the model costs used. Saved tokens is shown on the compression endpoint response. Take into consideration now cache invalidations that are done because of the compression step.
+When compression triggers (every N messages), here's exactly what happens:
 
-UI should be very plain and simple, dark mode. We dont care about UI just the functionality. Use nextjs server actions for backend stuff and keep the project simple.
+#### Step 1: Concatenate History + New Messages
+```
+[Previous compressed history, if any]
++
+[All new messages since last compression]
+```
 
-Also add a page that explains how the compression is done with visualizations for the user.
+#### Step 2: Add Protected Turn Labels
+New messages get `<ttc_safe>` tags around their turn labels. These tags tell the compression API to preserve this text exactly:
 
-Also allow user to let AI generate a message response to the last message if they want to try the sandbox but dont want to write million different messages. Take only the last agent response as input. Dont count this helper button generation as total tokens used quota is this is separate and should not be displayed in the statistics on the settings panel.
+```
+<ttc_safe>User:</ttc_safe> What is machine learning?
+<ttc_safe>Assistant:</ttc_safe> Machine learning is a subset of AI that...
+<ttc_safe>User:</ttc_safe> Can you give me an example?
+<ttc_safe>Assistant:</ttc_safe> Sure! A common example is email spam filtering...
+```
+
+The turn labels (`User:`, `Assistant:`) are protected so the LLM can still understand who said what after compression.
+
+#### Step 3: Compress via TTC API
+Send the concatenated text to `https://api.thetokencompany.com/v1/compress`:
+
+```json
+{
+  "model": "bear-1",
+  "input": "<the concatenated text>",
+  "compression_settings": {
+    "aggressiveness": 0.9
+  }
+}
+```
+
+#### Step 4: Replace Conversation History
+The compressed output becomes the new conversation history, stored as a second system message:
+
+**Before compression:**
+```
+[System Prompt]
+[User message 1]
+[Assistant message 1]
+[User message 2]
+[Assistant message 2]
+...
+```
+
+**After compression:**
+```
+[System Prompt]
+[Compressed History] ← All previous messages, compressed
+[New User message]   ← Conversation continues
+```
+
+#### Step 5: Repeat
+On the next compression trigger, the existing compressed history gets concatenated with new messages and re-compressed. The history can be compressed multiple times - it just gets more condensed.
+
+## Setup
+
+1. Clone this repository
+2. Install dependencies: `npm install`
+3. Create `.env.local` with your API keys:
+   ```
+   TTC_API_KEY=your_ttc_api_key
+   OPENROUTER_API_KEY=your_openrouter_api_key
+   ```
+4. Run the development server: `npm run dev`
+5. Open [http://localhost:3000](http://localhost:3000)
+
+## Features
+
+- **Multiple LLM models** via OpenRouter (DeepSeek, Mistral, Gemini)
+- **Configurable compression**: Adjust frequency (5-15 messages) and aggressiveness (0.1-0.9)
+- **Real-time statistics**: Track input tokens, output tokens, cost, and savings
+- **Context size graph**: Visualize compressed vs uncompressed context growth
+- **Raw message view**: See exactly what's being sent to the API
+- **AI test messages**: Generate realistic user messages to test the sandbox
+
+## Links
+
+- [The Token Company](https://thetokencompany.com) - Get your API key
+- [TTC Documentation](https://thetokencompany.com/docs) - Full API docs
+- [Protect Text Guide](https://thetokencompany.com/docs/protect-text) - Learn about `<ttc_safe>` tags

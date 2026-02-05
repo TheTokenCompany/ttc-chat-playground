@@ -82,7 +82,7 @@ export default function HowItWorksPage() {
             </p>
             <div className="space-y-2">
               <MessageBox role="system" content="You are a helpful assistant..." protected />
-              <MessageBox role="compressed" content="User asked about AI. Assistant explained AI is artificial intelligence, gave ChatGPT as example..." />
+              <MessageBox role="compressed" content="User: What AI? Agent: AI artifial intelligence..." />
               <MessageBox role="user" content="What about deep learning?" highlight />
             </div>
           </Section>
