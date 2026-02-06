@@ -12,7 +12,6 @@ export async function compressText(
   aggressiveness: number
 ): Promise<CompressionResult & { latencyMs: number }> {
   const apiKey = process.env.TTC_API_KEY;
-  const startTime = Date.now();
 
   if (!apiKey) {
     throw new Error('TTC API key is required. Please enter your API key in the settings.');
@@ -39,12 +38,11 @@ export async function compressText(
   }
 
   const data = await response.json();
-  const latencyMs = Date.now() - startTime;
   return {
     output: data.output,
     outputTokens: data.output_tokens,
     originalInputTokens: data.original_input_tokens,
-    latencyMs,
+    latencyMs: Math.round(data.compression_time * 1000),
   };
 }
 
