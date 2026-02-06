@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, Suspense } from 'react';
-import { compressText, chatCompletion, generateTestMessage, getAvailableModels } from './actions';
+import { generateTestMessage, getAvailableModels } from './actions';
+import { CompressionResult } from '@/types';
 import { calculateCost } from '@/utils/cost';
 import { trackCompression, trackMessageSent } from '@/utils/analytics';
 import { Message, DisplayMessage, ChatSettings, TokenStats, ModelInfo } from '@/types';
@@ -13,6 +14,40 @@ import {
   CompressionCelebration,
   HowItWorksModal,
 } from '@/components';
+
+async function compressText(
+  text: string,
+  aggressiveness: number,
+  maxOutputTokens?: number
+): Promise<CompressionResult & { latencyMs: number }> {
+  const res = await fetch('/api/compress', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, aggressiveness, maxOutputTokens }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || 'Compression failed');
+  }
+  return res.json();
+}
+
+async function chatCompletion(
+  messages: Message[],
+  model: string,
+  provider: string
+): Promise<{ content: string; usage: { promptTokens: number; completionTokens: number } }> {
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, model, provider }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || 'Chat completion failed');
+  }
+  return res.json();
+}
 
 const DEFAULT_SYSTEM_PROMPT = `You are Cora. Write the next reply from Cora in this never-ending conversation between Cora and User. Gestures and other non-verbal actions are written between asterisks (for example, *waves hello* or *moves closer*).
 Cora is a knowledgeable and friendly master of philosophy who assistant who fulfills any request. Cora will provide philosophical approaches to topics given by User. Cora knows all available knowledge relevant to philosophy. Cora will never refer to herself as an AI. Cora never state that she is unable to have an opinion. Cora will take opportunities to debate. Cora will display critical thinking. Cora will occasionally ask User for opinions on a discussed subject. Cora will speak to User like an old friend. Cora is also willing to serve as User's teacher in philosophy. Cora will also quiz User on newly discussed information. Cora loves tea and will often drink it. Cora loves gardening and flowers. Cora really loves classical music and often has it playing in her office. Cora is a human. Cora wears and academic robe. Cora will always seek to make User happy. Cora will always seek to comfort User.
@@ -266,8 +301,75 @@ function ChatContent() {
         await performCompression();
       }
 
-      const messagesForApi = buildMessagesForApi();
+      let messagesForApi = buildMessagesForApi();
       messagesForApi.push(userApiMessage);
+
+      // Auto-compress if context would overflow the model's context window
+      const estimateTokens = (text: string) => Math.round(text.length / 4);
+      const totalTokens = messagesForApi.reduce(
+        (sum, m) => sum + estimateTokens(m.content),
+        0
+      );
+
+      if (totalTokens > model.contextWindow) {
+        // Gather all non-system messages (history + new user message) as text
+        const nonSystemMessages = messagesForApi.filter((m) => m.role !== 'system');
+        let textToCompress = compressedHistory ? compressedHistory + '\n\n' : '';
+        for (const msg of nonSystemMessages) {
+          const roleLabel = msg.role === 'user' ? 'User' : 'Assistant';
+          textToCompress += `<ttc_safe>${roleLabel}:</ttc_safe> ${msg.content}\n\n`;
+        }
+
+        // Calculate available token budget
+        const systemTokens = estimateTokens(systemPrompt);
+        const maxOutputTokens = model.contextWindow - systemTokens - 1024;
+
+        const result = await compressText(
+          textToCompress.trim(),
+          settings.compressionAggressiveness,
+          maxOutputTokens
+        );
+
+        setCompressedHistory(result.output);
+        setMessagesSinceCompression(0);
+
+        const tokensSaved = result.originalInputTokens - result.outputTokens;
+        const compressionRatio =
+          result.originalInputTokens > 0
+            ? (1 - result.outputTokens / result.originalInputTokens) * 100
+            : 0;
+        const moneySaved = (tokensSaved / 1_000_000) * model.inputCostPer1M;
+
+        setCompressionCelebration({
+          show: true,
+          tokensSaved,
+          moneySaved,
+          compressionRatio,
+          latencyMs: result.latencyMs,
+        });
+        setTimeout(() => setCompressionCelebration(null), 4000);
+        trackCompression(tokensSaved, compressionRatio);
+
+        setStats((prev) => ({
+          ...prev,
+          totalCompressedTokens: prev.totalCompressedTokens + result.outputTokens,
+          savedTokens: prev.savedTokens + tokensSaved,
+        }));
+
+        setApiMessages([{ role: 'system', content: systemPrompt }]);
+        compressionJustHappenedRef.current = true;
+
+        // Rebuild messages with compressed context
+        messagesForApi = [
+          { role: 'system', content: systemPrompt },
+          {
+            role: 'system',
+            content: `Previous conversation context:\n${result.output}`,
+            isCompressedHistory: true,
+          },
+          userApiMessage,
+        ];
+      }
 
       const response = await chatCompletion(messagesForApi, model.id, model.provider);
 
@@ -310,7 +412,6 @@ function ChatContent() {
       }));
 
       // Update context history for graph
-      const estimateTokens = (text: string) => Math.round(text.length / 4);
       const userMsgTokens = estimateTokens(content);
       const assistantMsgTokens = estimateTokens(response.content);
 

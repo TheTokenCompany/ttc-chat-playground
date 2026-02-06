@@ -30,7 +30,8 @@ function getProviderConfig(provider: string): { url: string; apiKey: string; ext
 
 export async function compressText(
   text: string,
-  aggressiveness: number
+  aggressiveness: number,
+  maxOutputTokens?: number
 ): Promise<CompressionResult & { latencyMs: number }> {
   const apiKey = process.env.TTC_API_KEY;
 
@@ -49,6 +50,7 @@ export async function compressText(
       input: text,
       compression_settings: {
         aggressiveness: aggressiveness,
+        ...(maxOutputTokens != null && { max_output_tokens: maxOutputTokens }),
       },
     }),
   });
@@ -68,10 +70,11 @@ export async function compressText(
 }
 
 export async function chatCompletion(
-  messages: Message[],
+  messagesJson: string,
   model: string,
   provider: string
 ): Promise<{ content: string; usage: { promptTokens: number; completionTokens: number } }> {
+  const messages: Message[] = JSON.parse(messagesJson);
   const config = getProviderConfig(provider);
 
   const response = await fetch(config.url, {
@@ -155,6 +158,7 @@ export async function getAvailableModels(): Promise<ModelInfo[]> {
       provider: 'Groq',
       inputCostPer1M: 0.05,
       outputCostPer1M: 0.08,
+      contextWindow: 131_072,
     },
     {
       id: 'deepseek/deepseek-chat',
@@ -162,6 +166,7 @@ export async function getAvailableModels(): Promise<ModelInfo[]> {
       provider: 'DeepSeek',
       inputCostPer1M: 0.14,
       outputCostPer1M: 0.28,
+      contextWindow: 65_536,
     },
     {
       id: 'mistralai/mistral-small-24b-instruct-2501',
@@ -169,6 +174,7 @@ export async function getAvailableModels(): Promise<ModelInfo[]> {
       provider: 'Mistral',
       inputCostPer1M: 0.10,
       outputCostPer1M: 0.30,
+      contextWindow: 32_768,
     },
     {
       id: 'mistralai/mistral-nemo',
@@ -176,6 +182,7 @@ export async function getAvailableModels(): Promise<ModelInfo[]> {
       provider: 'Mistral',
       inputCostPer1M: 0.03,
       outputCostPer1M: 0.03,
+      contextWindow: 131_072,
     },
     {
       id: 'google/gemini-flash-1.5-8b',
@@ -183,6 +190,7 @@ export async function getAvailableModels(): Promise<ModelInfo[]> {
       provider: 'Google',
       inputCostPer1M: 0.0375,
       outputCostPer1M: 0.15,
+      contextWindow: 1_048_576,
     },
   ];
 }
