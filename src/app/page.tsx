@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback, Suspense } from 'react';
 import { compressText, chatCompletion, generateTestMessage, getAvailableModels } from './actions';
 import { calculateCost } from '@/utils/cost';
+import { trackCompression, trackMessageSent } from '@/utils/analytics';
 import { Message, DisplayMessage, ChatSettings, TokenStats, ModelInfo } from '@/types';
 import {
   Header,
@@ -213,6 +214,9 @@ function ChatContent() {
 
       setTimeout(() => setCompressionCelebration(null), 4000);
 
+      // Track compression event
+      trackCompression(tokensSaved, compressionRatio);
+
       setStats((prev) => ({
         ...prev,
         totalCompressedTokens: prev.totalCompressedTokens + result.outputTokens,
@@ -312,6 +316,9 @@ function ChatContent() {
 
       setContextHistory((prev) => [...prev, response.usage.promptTokens]);
       setUncompressedHistory((prev) => [...prev, theoreticalUncompressedRef.current]);
+
+      // Track message sent
+      trackMessageSent(model.id, requestCount + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
