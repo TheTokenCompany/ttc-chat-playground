@@ -5,7 +5,28 @@ import { Message, CompressionResult, ModelInfo } from '@/types';
 // Note: calculateCost is a pure function, moved to @/utils/cost.ts
 
 const TTC_API_URL = 'https://api.thetokencompany.com/v1/compress';
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+
+function getProviderConfig(provider: string): { url: string; apiKey: string; extraHeaders?: Record<string, string> } {
+  if (provider === 'Groq') {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) throw new Error('GROQ_API_KEY environment variable is not set');
+    return { url: GROQ_API_URL, apiKey };
+  }
+
+  // Default to OpenRouter for all other providers
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) throw new Error('OPENROUTER_API_KEY environment variable is not set');
+  return {
+    url: OPENROUTER_API_URL,
+    apiKey,
+    extraHeaders: {
+      'HTTP-Referer': 'https://thetokencompany.com',
+      'X-Title': 'TTC Chat Sandbox',
+    },
+  };
+}
 
 export async function compressText(
   text: string,
@@ -48,26 +69,24 @@ export async function compressText(
 
 export async function chatCompletion(
   messages: Message[],
-  model: string
+  model: string,
+  provider: string
 ): Promise<{ content: string; usage: { promptTokens: number; completionTokens: number } }> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const config = getProviderConfig(provider);
 
-  if (!apiKey) {
-    throw new Error('OPENROUTER_API_KEY environment variable is not set');
-  }
-
-  const response = await fetch(OPENROUTER_API_URL, {
+  const response = await fetch(config.url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': 'https://thetokencompany.com',
-      'X-Title': 'TTC Chat Sandbox',
+      'Authorization': `Bearer ${config.apiKey}`,
+      ...config.extraHeaders,
     },
     body: JSON.stringify({
       model: model,
       messages: messages.map(m => ({ role: m.role, content: m.content })),
-      max_tokens: 500,
+      max_completion_tokens: 1024,
+      temperature: 1,
+      top_p: 1,
     }),
   });
 
@@ -89,21 +108,17 @@ export async function chatCompletion(
 
 export async function generateTestMessage(
   lastAssistantMessage: string,
-  model: string
+  model: string,
+  provider: string
 ): Promise<string> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const config = getProviderConfig(provider);
 
-  if (!apiKey) {
-    throw new Error('OPENROUTER_API_KEY environment variable is not set');
-  }
-
-  const response = await fetch(OPENROUTER_API_URL, {
+  const response = await fetch(config.url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': 'https://thetokencompany.com',
-      'X-Title': 'TTC Chat Sandbox',
+      'Authorization': `Bearer ${config.apiKey}`,
+      ...config.extraHeaders,
     },
     body: JSON.stringify({
       model: model,
@@ -117,6 +132,9 @@ export async function generateTestMessage(
           content: `The AI just said: "${lastAssistantMessage}"\n\nGenerate a follow-up message from the user:`,
         },
       ],
+      temperature: 1,
+      max_completion_tokens: 1024,
+      top_p: 1,
     }),
   });
 
@@ -130,9 +148,14 @@ export async function generateTestMessage(
 }
 
 export async function getAvailableModels(): Promise<ModelInfo[]> {
-  // Return curated list of models as specified in README
-  // Prices are approximate per 1M tokens
   return [
+    {
+      id: 'llama-3.1-8b-instant',
+      name: 'Llama 3.1 8B Instant',
+      provider: 'Groq',
+      inputCostPer1M: 0.05,
+      outputCostPer1M: 0.08,
+    },
     {
       id: 'deepseek/deepseek-chat',
       name: 'DeepSeek Chat',
@@ -163,4 +186,3 @@ export async function getAvailableModels(): Promise<ModelInfo[]> {
     },
   ];
 }
-

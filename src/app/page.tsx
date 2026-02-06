@@ -91,6 +91,8 @@ function ChatContent() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const theoreticalUncompressedRef = useRef(0);
   const lastAssistantTokensRef = useRef(0);
+  const prevPromptTokensRef = useRef(0);
+  const compressionJustHappenedRef = useRef(false);
 
   // Load models on mount
   useEffect(() => {
@@ -125,6 +127,8 @@ function ChatContent() {
     setRequestCount(0);
     theoreticalUncompressedRef.current = 0;
     lastAssistantTokensRef.current = 0;
+    prevPromptTokensRef.current = 0;
+    compressionJustHappenedRef.current = false;
     setStats({
       inputTokens: 0,
       cachedInputTokens: 0,
@@ -224,6 +228,7 @@ function ChatContent() {
       }));
 
       setApiMessages([{ role: 'system', content: systemPrompt }]);
+      compressionJustHappenedRef.current = true;
     } catch (err) {
       console.error('Compression failed:', err);
       setError('Compression failed. Continuing without compression.');
@@ -264,7 +269,7 @@ function ChatContent() {
       const messagesForApi = buildMessagesForApi();
       messagesForApi.push(userApiMessage);
 
-      const response = await chatCompletion(messagesForApi, model.id);
+      const response = await chatCompletion(messagesForApi, model.id, model.provider);
 
       // Add assistant message
       const assistantDisplayMessage: DisplayMessage = {
@@ -280,13 +285,14 @@ function ChatContent() {
       setMessagesSinceCompression((prev) => prev + 1);
 
       // Update stats
-      const estimateTokens = (text: string) => Math.round(text.length / 4);
-      const systemPromptTokens = estimateTokens(systemPrompt);
-      const compressedHistoryTokens = compressedHistory
-        ? estimateTokens(compressedHistory) + estimateTokens('Previous conversation context:\n')
-        : 0;
-      const estimatedCachedTokens =
-        requestCount > 0 ? systemPromptTokens + compressedHistoryTokens : 0;
+      // Cache estimation: on each request, the prefix matching the previous
+      // request's prompt is served from cache. After compression the prefix
+      // changes, so nothing is cached on that first post-compression request.
+      const cachedTokens = compressionJustHappenedRef.current
+        ? 0
+        : prevPromptTokensRef.current;
+      prevPromptTokensRef.current = response.usage.promptTokens;
+      compressionJustHappenedRef.current = false;
 
       setRequestCount((prev) => prev + 1);
 
@@ -298,12 +304,13 @@ function ChatContent() {
       setStats((prev) => ({
         ...prev,
         inputTokens: prev.inputTokens + response.usage.promptTokens,
-        cachedInputTokens: prev.cachedInputTokens + estimatedCachedTokens,
+        cachedInputTokens: prev.cachedInputTokens + cachedTokens,
         outputTokens: prev.outputTokens + response.usage.completionTokens,
         cost: prev.cost + newCost,
       }));
 
       // Update context history for graph
+      const estimateTokens = (text: string) => Math.round(text.length / 4);
       const userMsgTokens = estimateTokens(content);
       const assistantMsgTokens = estimateTokens(response.content);
 
@@ -337,7 +344,7 @@ function ChatContent() {
     setIsGeneratingTest(true);
 
     try {
-      const testMessage = await generateTestMessage(lastAssistantMessage, model.id);
+      const testMessage = await generateTestMessage(lastAssistantMessage, model.id, model.provider);
       setInputValue(testMessage);
       inputRef.current?.focus();
     } catch (err) {
