@@ -401,7 +401,8 @@ function ChatContent() {
       const newCost = calculateCost(
         response.usage.promptTokens,
         response.usage.completionTokens,
-        model
+        model,
+        cachedTokens
       );
       setStats((prev) => ({
         ...prev,
@@ -575,6 +576,7 @@ function ChatContent() {
         contextHistory={contextHistory}
         uncompressedHistory={uncompressedHistory}
         stats={stats}
+        model={model}
         messagesSinceCompression={messagesSinceCompression}
       />
 

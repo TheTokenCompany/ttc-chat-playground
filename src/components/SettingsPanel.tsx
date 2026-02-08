@@ -1,4 +1,4 @@
-import { TokenStats } from '@/types';
+import { TokenStats, ModelInfo } from '@/types';
 import { CloseIcon } from './Icons';
 import { ContextSizeGraph } from './ContextSizeGraph';
 
@@ -24,6 +24,7 @@ interface SettingsPanelProps {
   uncompressedHistory: number[];
   // Stats
   stats: TokenStats;
+  model: ModelInfo;
   // Compression status
   messagesSinceCompression: number;
 }
@@ -46,6 +47,7 @@ export function SettingsPanel({
   contextHistory,
   uncompressedHistory,
   stats,
+  model,
   messagesSinceCompression,
 }: SettingsPanelProps) {
   return (
@@ -111,7 +113,7 @@ export function SettingsPanel({
         />
 
         {/* Token Statistics */}
-        <TokenStatistics stats={stats} />
+        <TokenStatistics stats={stats} model={model} />
 
         {/* Compression Status */}
         <CompressionStatus
@@ -209,22 +211,28 @@ function CompressionSettings({
   );
 }
 
-function TokenStatistics({ stats }: { stats: TokenStats }) {
+function TokenStatistics({ stats, model }: { stats: TokenStats; model: ModelInfo }) {
+  const hasCaching = model.cachedInputCostPer1M != null;
+  const cacheSavingsPercent = hasCaching && stats.cachedInputTokens > 0 && stats.inputTokens > 0
+    ? ((stats.cachedInputTokens / stats.inputTokens) *
+       (1 - model.cachedInputCostPer1M! / model.inputCostPer1M) * 100)
+    : 0;
+
   return (
     <div className="border-t border-zinc-800 pt-4 mt-4">
       <h3 className="font-medium text-sm mb-3">Token Statistics</h3>
       <div className="space-y-2 text-sm">
         <StatRow label="Input Tokens" value={stats.inputTokens.toLocaleString()} />
         <StatRow label="Output Tokens" value={stats.outputTokens.toLocaleString()} />
-        {stats.inputTokens > 0 && (
+        {hasCaching && stats.inputTokens > 0 && (
           <StatRow
-            label="Est. Cache Rate"
+            label="Est. Cache Savings"
             value={
-              stats.cachedInputTokens > 0
-                ? `~${((stats.cachedInputTokens / stats.inputTokens) * 100).toFixed(0)}%`
+              cacheSavingsPercent > 0
+                ? `~${cacheSavingsPercent.toFixed(1)}%`
                 : '0%'
             }
-            valueClassName={stats.cachedInputTokens > 0 ? 'text-cyan-400' : 'text-zinc-500'}
+            valueClassName={cacheSavingsPercent > 0 ? 'text-cyan-400' : 'text-zinc-500'}
           />
         )}
         <StatRow label="Compressed To" value={stats.totalCompressedTokens.toLocaleString()} />
@@ -237,6 +245,11 @@ function TokenStatistics({ stats }: { stats: TokenStats }) {
           <span className="text-zinc-400">Total Cost:</span>
           <span>${stats.cost.toFixed(6)}</span>
         </div>
+        {hasCaching && stats.inputTokens > 0 && (
+          <div className="text-[11px] text-zinc-500 mt-1">
+            * Assuming prompt prefix caching
+          </div>
+        )}
       </div>
     </div>
   );

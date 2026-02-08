@@ -166,6 +166,7 @@ export async function getAvailableModels(): Promise<ModelInfo[]> {
       provider: 'DeepSeek',
       inputCostPer1M: 0.14,
       outputCostPer1M: 0.28,
+      cachedInputCostPer1M: 0.07,
       contextWindow: 65_536,
     },
     {

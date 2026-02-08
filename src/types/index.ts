@@ -35,6 +35,7 @@ export interface ModelInfo {
   provider: string;
   inputCostPer1M: number;
   outputCostPer1M: number;
+  cachedInputCostPer1M?: number;
   contextWindow: number;
 }
 
