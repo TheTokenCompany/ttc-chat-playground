@@ -8,6 +8,20 @@ const TTC_API_URL = 'https://api.thetokencompany.com/v1/compress';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
+const ALLOWED_MODEL_IDS = new Set([
+  'llama-3.1-8b-instant',
+  'deepseek/deepseek-chat',
+  'mistralai/mistral-small-24b-instruct-2501',
+  'mistralai/mistral-nemo',
+  'google/gemini-flash-1.5-8b',
+]);
+
+function validateModel(model: string): void {
+  if (!ALLOWED_MODEL_IDS.has(model)) {
+    throw new Error(`Model "${model}" is not allowed`);
+  }
+}
+
 function getProviderConfig(provider: string): { url: string; apiKey: string; extraHeaders?: Record<string, string> } {
   if (provider === 'Groq') {
     const apiKey = process.env.GROQ_API_KEY;
@@ -74,6 +88,8 @@ export async function chatCompletion(
   model: string,
   provider: string
 ): Promise<{ content: string; usage: { promptTokens: number; completionTokens: number } }> {
+  validateModel(model);
+
   const messages: Message[] = JSON.parse(messagesJson);
   const config = getProviderConfig(provider);
 
@@ -114,6 +130,8 @@ export async function generateTestMessage(
   model: string,
   provider: string
 ): Promise<string> {
+  validateModel(model);
+
   const config = getProviderConfig(provider);
 
   const response = await fetch(config.url, {
