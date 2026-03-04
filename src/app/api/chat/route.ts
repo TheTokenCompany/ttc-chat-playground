@@ -22,8 +22,17 @@ function getProviderConfig(provider: string): { url: string; apiKey: string; ext
   };
 }
 
+const MAX_MESSAGE_LENGTH = 2000;
+
 export async function POST(request: NextRequest) {
   const { messages, model, provider } = await request.json();
+
+  if (!Array.isArray(messages) || messages.some((m: { content: string }) => m.content && m.content.length > MAX_MESSAGE_LENGTH)) {
+    return NextResponse.json(
+      { error: `Each message must be ${MAX_MESSAGE_LENGTH} characters or fewer.` },
+      { status: 400 }
+    );
+  }
 
   const config = getProviderConfig(provider);
 

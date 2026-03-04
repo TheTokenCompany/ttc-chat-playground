@@ -45,6 +45,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
+            maxLength={2000}
             rows={1}
             className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 sm:px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none min-w-0"
           />

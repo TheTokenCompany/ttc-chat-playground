@@ -26,6 +26,9 @@ async function compressText(
     body: JSON.stringify({ text, aggressiveness, maxOutputTokens }),
   });
   if (!res.ok) {
+    if (res.status === 429) {
+      throw new Error('Rate limit reached — please wait a moment before trying again.');
+    }
     const data = await res.json();
     throw new Error(data.error || 'Compression failed');
   }
@@ -43,6 +46,9 @@ async function chatCompletion(
     body: JSON.stringify({ messages, model, provider }),
   });
   if (!res.ok) {
+    if (res.status === 429) {
+      throw new Error('Rate limit reached — please wait a moment before trying again.');
+    }
     const data = await res.json();
     throw new Error(data.error || 'Chat completion failed');
   }

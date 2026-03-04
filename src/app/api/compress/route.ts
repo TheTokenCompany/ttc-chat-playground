@@ -2,8 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const TTC_API_URL = 'https://api.thetokencompany.com/v1/compress';
 
+const MAX_TEXT_LENGTH = 100_000;
+
 export async function POST(request: NextRequest) {
   const { text, aggressiveness, maxOutputTokens } = await request.json();
+
+  if (typeof text !== 'string' || text.length > MAX_TEXT_LENGTH) {
+    return NextResponse.json(
+      { error: `Text must be ${MAX_TEXT_LENGTH.toLocaleString()} characters or fewer.` },
+      { status: 400 }
+    );
+  }
 
   const apiKey = process.env.TTC_API_KEY;
   if (!apiKey) {
